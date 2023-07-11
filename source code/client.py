@@ -1,6 +1,7 @@
 import socket
 import struct
 import sys
+import math
 
 # TFTP opcodes
 OPCODE_RRQ = 1
@@ -76,67 +77,81 @@ def send_rrq(filename, server_ip, server_port, save_filename):
 def send_wrq(filename, server_ip, server_port):
     # Create socket
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    
+
     # Pack WRQ packet
     wrq_packet = struct.pack('!H', OPCODE_WRQ)
     wrq_packet += filename.encode() + b'\0' + b'octet' + b'\0'
-    
+
     # Send WRQ packet
     client_socket.sendto(wrq_packet, (server_ip, server_port))
-    
+
     # Open the file for reading
     try:
         file = open(filename, 'rb')
     except IOError as e:
         print("Error: Failed to open file:", e)
         sys.exit(1)
-    
+
     block_number = 0
     while True:
         block_number += 1
         data = file.read(BLOCK_SIZE)
-        
-        if len(data) < BLOCK_SIZE:
-            # Last data block
-            packet = struct.pack('!H', OPCODE_DATA) + struct.pack('!H', block_number) + data
-            client_socket.sendto(packet, (server_ip, server_port))
-            
+
+        if len(data) == 0:
+            # End of file
             break
-        
-        # Send data packet
-        packet = struct.pack('!H', OPCODE_DATA) + struct.pack('!H', block_number) + data
-        client_socket.sendto(packet, (server_ip, server_port))
-        
-        # Wait for ACK packet
-        try:
-            ack_packet, server_address = client_socket.recvfrom(4)
-        except socket.timeout:
-            print("Error: Server did not respond.")
-            file.close()
-            sys.exit(1)
-        
-        ack_opcode = struct.unpack('!H', ack_packet[:2])[0]
-        ack_block_number = struct.unpack('!H', ack_packet[2:4])[0]
-        
-        if ack_opcode != OPCODE_ACK or ack_block_number != block_number:
-            print("Error: Duplicate ACK received.")
-            file.close()
-            sys.exit(1)
-    
-    print("Upload complete.")
+
+        num_packets = math.ceil(len(data) / BLOCK_SIZE)
+        for i in range(num_packets):
+            start = i * BLOCK_SIZE
+            end = (i + 1) * BLOCK_SIZE
+            packet_data = data[start:end]
+
+            # Send data packet
+            packet = struct.pack('!H', OPCODE_DATA) + struct.pack('!H', block_number) + packet_data
+            try:
+                client_socket.sendto(packet, (server_ip, server_port))
+            except socket.error as e:
+                print("Error: Failed to send packet:", e)
+                file.close()
+                sys.exit(1)
+
+            # Wait for ACK packet
+            try:
+                ack_packet, server_address = client_socket.recvfrom(4)
+            except socket.timeout:
+                print("Error: Server did not respond.")
+                file.close()
+                sys.exit(1)
+
+            ack_opcode = struct.unpack('!H', ack_packet[:2])[0]
+            ack_block_number = struct.unpack('!H', ack_packet[2:4])[0]
+
+            if ack_opcode != OPCODE_ACK or ack_block_number != block_number:
+                print("Error: Duplicate ACK received.")
+                file.close()
+                sys.exit(1)
+
+    # Close the file
     file.close()
+
+    print("Upload complete.")
+
 
 def main():
     # Get user input
-    command = input("Enter 'upload' or 'download': ")
+    print("COMMANDS")
+    print("[1] Upload")
+    print("[2] Download")
+    command = input("Enter Choice: ")
     
-    if command == "upload":
+    if command == "1":
         filename = input("Enter the filename to upload: ")
         server_ip = input("Enter the server IP address: ")
         server_port = int(input("Enter the server port number: "))
         
         send_wrq(filename, server_ip, server_port)
-    elif command == "download":
+    elif command == "2":
         filename = input("Enter the filename to download: ")
         save_filename = input("Enter the filename to save the downloaded file as: ")
         server_ip = input("Enter the server IP address: ")
