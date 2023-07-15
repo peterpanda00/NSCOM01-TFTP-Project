@@ -1,0 +1,55 @@
+Logged action: write
+Date: 2023-07-14 00:42:02.472173
+Params: ('FileA.jpg', 'C:/Users/Jill/Desktop/NSCOM01-TFTP-Project/FileA.jpg', 'octet')
+Message: Initiating WRQ request ('192.168.56.1', 69)/FileA.jpg of size 8 KB.
+
+Logged action: write end
+Date: 2023-07-14 00:42:02.481152
+Params: None
+Message: Ending write()
+
+Logged action: write success
+Date: 2023-07-14 00:42:02.489146
+Params: ('FileA.jpg', 'C:/Users/Jill/Desktop/NSCOM01-TFTP-Project/FileA.jpg', 'octet')
+Message: Success in writing file FileA.jpg to host ('192.168.56.1', 69), total bytes sent: 7944, total retry counts: 0, execution time: 0.01398015022277832 seconds
+
+Logged action: __del__
+Date: 2023-07-14 00:42:02.494145
+Params: 192.168.56.1:69
+Message: Calling tftpclient.destructor and closing socket.
+
+Logged action: write
+Date: 2023-07-14 00:42:35.253519
+Params: ('NEWNEW.jpg', 'C:/Users/Jill/Desktop/NSCOM01-TFTP-Project/FileA.jpg', 'octet')
+Message: Initiating WRQ request ('192.168.56.1', 69)/NEWNEW.jpg of size 8 KB.
+
+Logged action: write end
+Date: 2023-07-14 00:42:35.261497
+Params: None
+Message: Ending write()
+
+Logged action: write success
+Date: 2023-07-14 00:42:35.268482
+Params: ('NEWNEW.jpg', 'C:/Users/Jill/Desktop/NSCOM01-TFTP-Project/FileA.jpg', 'octet')
+Message: Success in writing file NEWNEW.jpg to host ('192.168.56.1', 69), total bytes sent: 7944, total retry counts: 0, execution time: 0.01296687126159668 seconds
+
+Logged action: __del__
+Date: 2023-07-14 00:42:35.276458
+Params: 192.168.56.1:69
+Message: Calling tftpclient.destructor and closing socket.
+
+Logged action: read
+Date: 2023-07-14 00:42:41.306565
+Params: ('FileA.jpg', 'NEWNEW.jpg', 'octet')
+Message: Initiating RRQ request to: 192.168.56.1 port: 69
+
+Logged action: read finished
+Date: 2023-07-14 00:42:41.316541
+Params: None
+Message: Success in reading file FileA.jpg from host ('192.168.56.1', 69), total bytes received: 8008, total retry counts: 0, execution time: 0.001995086669921875 seconds
+
+Logged action: __del__
+Date: 2023-07-14 00:42:41.323522
+Params: 192.168.56.1:69
+Message: Calling tftpclient.destructor and closing socket.
+
