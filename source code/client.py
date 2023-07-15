@@ -1,4 +1,5 @@
 import socket
+import time
 HEADER_SIZE = 4
 SERVER_PORT = 69
 DATA_SIZE = 512
@@ -209,28 +210,42 @@ def existing_file(filename):
 
 
 def tftp_instruction(server_ip): 
-		print('\nSuccessfully connected to ' + server_ip)
-		print('\nSimple TFTP Client')
-		print('\nCommands:')
-		print('	TFTP Operation CODES - "get", "put"')
-		print('	TFTP Transfer MODES - "netascii", "octet"\n')
+        print('  ._._._._._._._._._._._._._._._._._.')
+        print('\n  Successfully connected to ' + server_ip)
+        print('\n  COMMANDS:')
+        print('    TFTP Operation CODES:')
+        print('      "get", "put')
+        print('    TFTP Transfer MODES:')
+        print('      "netascii", "octet"')
+        print('\n')
+        print('  PROPER OPERATION:')
+        print('   <CODE> <FILENAME.EXTENSION> <MODE>')
+        print('   e.g., "get filename.txt netascii"\n')
 
-		print('Proper Operation of Client:')
-		print('	<CODE> <FILENAME.EXTENSION> <MODE>')
-		print('	e.g., "get filename.txt netascii"\n')
-
-		print('Exit Commands:')
+        print('  EXIT COMMANDS:')
   
-		print('	Client will only exit if all 3 parameters (code, filename and mode) are equal to "exit".')
-		print('	e.g., "exit exit exit"\n')
+        print('Client will only exit if all 3 parameters (code, filename and mode) are equal to "exit".')
+        print('	e.g., "exit exit exit"\n')
   
 
 
 def main():
-    server_ip = input('Enter IP address of TFTP server: ')
-    print('[Connecting to host ' + server_ip + '...]')
+    print('  ._._._._._._._._._._._._._._._._._.')
+    print('  |  _______ ______ _______ _____   |')
+    print('  | |__   __|  ____|__   __|  __ \  |')
+    print('  |    | |  | |__     | |  | |__) | |')
+    print('  |    | |  |  __|    | |  |  ___/  |')
+    print('  |    | |  | |       | |  | |      |')
+    print('  |    |_|  |_|       |_|  |_|      |')
+    print('  ._._._._._._._._._._._._._._._._._.')
+    print('\n')
+    time.sleep(1)
+    server_ip = input('  Enter IP address of TFTP server: ') 
+    print('  ...Connecting to host ' + server_ip + '...')
     server = (server_ip, SERVER_PORT)
+    print('\n')
 
+    time.sleep(1)
     tftp_instruction(server_ip)
 
     while True:
