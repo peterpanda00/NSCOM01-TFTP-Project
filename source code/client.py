@@ -1,4 +1,6 @@
 import socket
+import tkinter as tk
+from tkinter import filedialog
 HEADER_SIZE = 4
 SERVER_PORT = 69
 DATA_SIZE = 512
@@ -208,23 +210,107 @@ def existing_file(filename):
         return 0
 
 
-def tftp_instruction(server_ip): 
-		print('\nSuccessfully connected to ' + server_ip)
-		print('\nSimple TFTP Client')
-		print('\nCommands:')
-		print('	TFTP Operation CODES - "get", "put"')
-		print('	TFTP Transfer MODES - "netascii", "octet"\n')
+def connect_to_server():
+    server_ip = ip_entry.get()
+    status_label.config(text='[Connecting to host ' + server_ip + '...]')
 
-		print('Proper Operation of Client:')
-		print('	<CODE> <FILENAME.EXTENSION> <MODE>')
-		print('	e.g., "get filename.txt netascii"\n')
+def browse_file():
+    filename = filedialog.askopenfilename()
+    filename_entry.delete(0, tk.END)
+    filename_entry.insert(0, filename)
 
-		print('Exit Commands:')
-  
-		print('	Client will only exit if all 3 parameters (code, filename and mode) are equal to "exit".')
-		print('	e.g., "exit exit exit"\n')
-  
+def submit_command():
+    operation = operation_var.get().lower()
+    filename = filename_entry.get()
+    mode = mode_var.get().lower()
 
+    if operation == 'exit' and filename == 'exit' and mode == 'exit':
+        status_label.config(text='Exiting Client...')
+        return
+
+    operation = operation.lower()
+    mode = mode.lower()
+
+    if mode in MODES:
+        if operation == 'get':
+            filename_saved = alternate_filename_entry.get()
+            status_label.config(text='Downloading file: ' + filename)
+            tftp_request('read', filename, mode)
+            tftp_read(filename_saved, mode)
+            downloaded_filename_entry.delete(0, tk.END)
+            downloaded_filename_entry.insert(0, filename_saved)
+        elif operation == 'put':
+            if existing_file(filename):
+                status_label.config(text='Sending file: ' + filename)
+                tftp_request('write', filename, mode)
+                tftp_write(filename, mode)
+            else:
+                status_label.config(text='[File not found || access violation]\n')
+        else:
+            status_label.config(text='[Invalid Operation]\n')
+    else:
+        status_label.config(text='[Invalid Mode]\n')
+
+
+
+window = tk.Tk()
+window.geometry('500x500')
+window.title('TFTP Client')
+
+
+header_label = tk.Label(window, text='Input Server Address')
+header_label.pack()
+
+
+ip_label = tk.Label(window, text='IP Address:')
+ip_label.pack()
+ip_entry = tk.Entry(window)
+ip_entry.pack()
+
+
+connect_button = tk.Button(window, text='Connect', command=connect_to_server)
+connect_button.pack()
+
+
+
+operation_var = tk.StringVar()
+upload_button = tk.Radiobutton(window, text='Upload', variable=operation_var, value='put')
+upload_button.pack()
+download_button = tk.Radiobutton(window, text='Download', variable=operation_var, value='get')
+download_button.pack()
+
+
+filename_label = tk.Label(window, text='Filename:')
+filename_label.pack()
+filename_entry = tk.Entry(window)
+filename_entry.pack()
+browse_button = tk.Button(window, text='Browse', command=browse_file)
+browse_button.pack()
+
+
+alternate_filename_label = tk.Label(window, text='Alternate Filename:')
+alternate_filename_label.pack()
+alternate_filename_entry = tk.Entry(window)
+alternate_filename_entry.pack()
+
+# Mode Dropdown
+mode_label = tk.Label(window, text='Mode:')
+mode_label.pack()
+mode_var = tk.StringVar()
+mode_dropdown = tk.OptionMenu(window, mode_var, *MODES)
+mode_dropdown.pack()
+
+# Submit Button
+submit_button = tk.Button(window, text='Submit', command=submit_command)
+submit_button.pack()
+
+# Status Label
+status_label = tk.Label(window, text='')
+status_label.pack()
+
+
+"""
+    
 
 def main():
     server_ip = input('Enter IP address of TFTP server: ')
@@ -267,8 +353,8 @@ def main():
         except ValueError:
             print('[Invalid Input]\n')
 
-
+"""
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)    #creating UDP socket
-main()
+window.mainloop()
 #closing UDP socket
 sock.close()
