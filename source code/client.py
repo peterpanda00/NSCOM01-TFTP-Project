@@ -251,14 +251,14 @@ def main():
                 print('Exiting Client...')
                 break
 
-            print('    TFTP Transfer FILENAME FORMAT:')
+            print('    TFTP Transfer FILENAME Format:')
             print('      Ex. "Sample.jpg"')
             print('\n')
 
             filename = input('Enter filename: ')
 
             print('    TFTP Transfer MODES:')
-            print('      [1] "netascii", [2] "octet"')
+            print('      [1] "netascii" [2] "octet"')
             print('\n')
            
             mode = input('Enter mode: ')
