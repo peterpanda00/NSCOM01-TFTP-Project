@@ -86,7 +86,7 @@ def tftp_send_ack(ack_data, server):
     ack[0] = 0
     ack[1] = OPCODES['ack']
 
-    print(f"Ack packet: {ack}\n")
+    #print(f"Ack packet: {ack}\n")
     sock.sendto(ack, server)
 
 """
