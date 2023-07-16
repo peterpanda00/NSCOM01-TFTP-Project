@@ -5,7 +5,7 @@ HEADER_SIZE = 4
 SERVER_PORT = 69
 DATA_SIZE = 512
 BLK_SIZE = HEADER_SIZE + DATA_SIZE
-BUFFER_SIZE = 600
+BUFFER_SIZE = 6000
 
 """
 Dictionary mapping TFTP opcodes (operation codes) to their corresponding numerical values
@@ -46,8 +46,7 @@ MODES = {
             - 1 byte: Null terminator to terminate the mode field.
     """
 
-def tftp_create_req(operation, filename, mode, server):
-    
+def create_request(operation, filename, mode, server, options=None):
     request = bytearray()
 
     # 01 for RRQ, 02 for WRQ
@@ -65,10 +64,44 @@ def tftp_create_req(operation, filename, mode, server):
 
     # Null terminator at the end
     request.append(0) 
+
+    if options:
+        # Append options to the request
+        for key, value in options.items():
+            option = bytearray(bytes(key, 'utf-8'))
+            request += option
+            request.append(0)
+            option_value = bytearray(bytes(value, 'utf-8'))
+            request += option_value
+            request.append(0)
     
     # Send request to the server
     sock.sendto(request, server) 
     print(f"Request: {request}")
+    
+
+
+def send_oack(options, server):
+    oack_data = b"\x00\x06"  # OACK opcode
+    for key, value in options.items():
+        oack_data += key.encode() + b"\x00" + value.encode() + b"\x00"
+    sock.sendto(oack_data, server)
+
+def parse_oack(oack_data):
+    options = {}
+    i = 0
+    while i < len(oack_data):
+        key_end = oack_data.find(b'\x00', i)
+        if key_end == -1:
+            break
+        value_end = oack_data.find(b'\x00', key_end + 1)
+        if value_end == -1:
+            break
+        key = oack_data[i:key_end].decode('utf-8')
+        value = oack_data[key_end + 1:value_end].decode('utf-8')
+        options[key] = value
+        i = value_end + 1
+    return options
 
 
 """
@@ -79,7 +112,7 @@ def tftp_create_req(operation, filename, mode, server):
         server (tuple): The client's address (IP address and port) to send the ACK packet.
     """
 
-def tftp_send_ack(ack_data, server):
+def send_ack(ack_data, server):
     ack = bytearray(ack_data)
 
     # 04 for ACK
@@ -105,30 +138,48 @@ def tftp_send_ack(ack_data, server):
         - Handling socket timeouts, indicating server unresponsiveness during the read operation.
         - Checking for server errors using the `error_detection()` function and stopping the operation if an error is received.
         - Writing the received data to the file, handling any disk full errors that may occur.
-        - Sending acknowledgment packets (ACK) for received data to the server using the `tftp_send_ack()` function.
+        - Sending acknowledgment packets (ACK) for received data to the server using the `send_ack()` function.
         - Repeating the process until the last data packet is received, which indicates the successful download of the file.
 
     """
 
-def read(filename_saved, mode):
+def read(filename_saved, mode, blksize, server):
     if mode == 'netascii':
         file = open(filename_saved, "w") 
     elif mode == 'octet':
         file = open(filename_saved, "wb")
-      
+
+    options = {"blksize": str(blksize)}
+
+    # Send initial read request with block size option
+    create_request('read', filename_saved, mode, server, options=options)
+    
+
+    negotiated_blksize = blksize
+
     while True:
         sock.settimeout(5)
         try:
-            data, server = sock.recvfrom(BUFFER_SIZE)  
+            data, server = sock.recvfrom(negotiated_blksize + HEADER_SIZE)
         except socket.timeout:
             print('[Timeout!! server is not responsive!]')
             print('[Terminating!!]\n')
             break
+
         if error_detection(data):
             break
 
-        cont = data[4:]
-        print(f"Content : {cont}")
+        # Check if the received data contains options (OACK)
+        if data[1] == OPCODES['read'] and data[0:2] == b'\x00\x06':
+            # Parse OACK and update negotiated options
+            options = parse_oack(data[HEADER_SIZE:])
+            if 'blksize' in options:
+                negotiated_blksize = int(options['blksize'])
+                print(f"Negotiated block size: {negotiated_blksize}")
+            continue
+
+        cont = data[HEADER_SIZE:]
+        print(f"Content: {cont}")
 
         if mode == 'netascii':
             cont = cont.decode("utf-8")
@@ -136,20 +187,19 @@ def read(filename_saved, mode):
         try:
             file.write(cont)
         except OSError:
-            print(errors[3]) #handles the disk full errors
+            print(errors[3])  # Handles the disk full errors
             break
 
         print(f"[Data]: {data[0:4]} : {len(data)}")
 
-        tftp_send_ack(data[0:4], server)
-        #last DATA packet
-        if len(data) < BLK_SIZE:
+        send_ack(data[0:4], server)
+
+        # Last DATA packet
+        if len(data) < negotiated_blksize + HEADER_SIZE:
             print('[File downloaded successfully!]\n')
             break
 
     file.close()
-
-
 """ 
     Perform TFTP write operation to upload a file to a TFTP server.
 
@@ -169,7 +219,7 @@ def read(filename_saved, mode):
 
     """
 
-def write(filename, mode):
+def write(filename, mode, blksize, server):
     if mode == 'netascii':
         file = open(filename, "r")
     elif mode == 'octet':
@@ -177,36 +227,42 @@ def write(filename, mode):
 
     prev_blockno = -1
 
+    options = {"blksize": str(blksize)}
+    create_request('write', filename, mode, server, options=options)
+    
+
+
     while True:
         sock.settimeout(5)
         try:
             ack, server = sock.recvfrom(BUFFER_SIZE) #waiting response
         except socket.timeout:
-            print('[Timeout!! server is not responsive!]')
-            print('[Terminating!!]\n')
+            print('Timeout. Server is unresponsive.')
+            print('Terminating...\n')
             break
 
         if error_detection(ack):
             break 
         # Duplicate ACK handling
         if prev_blockno != int.from_bytes(ack[2:4], byteorder='big'):
-
             print(f"Ack packet: {ack}")
 
             block_no = int.from_bytes(ack[2:4], byteorder='big')
             prev_blockno = block_no
             block_no = block_no + 1
 
-            # Reading files as data and should be <512 
-            data = file.read(512)
+            # Reading files as data and should be < blksize - HEADER_SIZE
+            data = file.read(blksize - HEADER_SIZE)
             print(f"Content : {data}")
 
             if mode == 'netascii':
-               
                 data = bytearray(bytes(data, 'utf-8'))
             data_packet(block_no, data, server)
             
-            if len(data) < DATA_SIZE:
+            if len(data) < blksize - HEADER_SIZE:
+                # Send OACK with block size option
+                send_oack(options, server)
+
                 # Waiting for last ACK response 
                 ack, server = sock.recvfrom(BUFFER_SIZE)
                 print('File uploaded successfully.\n')
@@ -330,7 +386,13 @@ def connection(server_ip):
         print('  ._._._._._._._._._._._._._._._._._.')
         print('\n  Successfully connected to ' + server_ip)
 
-  
+def display_block_size_options():
+    print("\nChoose Transfer Block Size:")
+    print("[1] Default (512)")
+    print("[2] 1024")
+    print("[3] 1428")
+    print("[4] 2048")
+    print()
 
 
 def main():
@@ -365,6 +427,12 @@ def main():
 
             operation = input('Enter command: ')
 
+            if operation == '1':
+                print('[Command] : GET (Download) ')
+            elif operation == '2':
+                print('[Command] : PUT (Upload)')
+            
+
             if operation == '3':
                 print('Exiting Client...')
                 break
@@ -374,6 +442,8 @@ def main():
             print('\n')
 
             filename = input('Enter filename: ')
+
+            print('[File Name]: ' + filename)
 
             _, file_extension = os.path.splitext(filename)
 
@@ -391,6 +461,27 @@ def main():
                     mode = 'netascii'
                 elif mode == '2':
                     mode = 'octet'
+            
+            print('[Mode of Transfer]: ' + mode)
+            
+            display_block_size_options()
+            block_size_option = input('Enter option: ')
+
+            if block_size_option == '1':
+                blksize = BLK_SIZE
+            elif block_size_option == '2':
+                blksize = 1024 
+            elif block_size_option == '3':
+                blksize = 1428 
+            elif block_size_option == '4':
+                blksize = 2048 + HEADER_SIZE
+            else:
+                print('Switching to Default (512)')
+                blksize = BLK_SIZE
+            
+            block_size = str(blksize)
+            print('Block Size: ' + block_size)
+
 
 
             operation = operation.lower()
@@ -400,13 +491,13 @@ def main():
                 if operation == '1':
                     filename_saved = input(
                         'Enter new filename: ')
-                    tftp_create_req('read', filename, mode, server)
-                    read(filename_saved, mode)
+                    create_request('read', filename, mode, server)
+                    read(filename_saved, mode,blksize,server)
 
                 elif operation == '2':
                     if valid_file(filename):
-                        tftp_create_req('write', filename, mode, server)
-                        write(filename, mode)
+                        create_request('write', filename, mode, server)
+                        write(filename, mode,blksize,server)
                     else:
                         print('[File not found || access violation]\n')
 
