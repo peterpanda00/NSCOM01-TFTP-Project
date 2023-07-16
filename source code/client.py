@@ -128,7 +128,7 @@ def read(filename_saved, mode):
             break
 
         cont = data[4:]
-        print(f"Content : {cont}")
+        #print(f"Content : {cont}")
 
         if mode == 'netascii':
             cont = cont.decode("utf-8")
@@ -139,7 +139,7 @@ def read(filename_saved, mode):
             print(errors[3]) #handles the disk full errors
             break
 
-        print(f"[Data]: {data[0:4]} : {len(data)}")
+        #print(f"[Data]: {data[0:4]} : {len(data)}")
 
         tftp_send_ack(data[0:4], server)
         #last DATA packet
@@ -191,7 +191,7 @@ def write(filename, mode):
         # Duplicate ACK handling
         if prev_blockno != int.from_bytes(ack[2:4], byteorder='big'):
 
-            print(f"Ack packet: {ack}")
+            #print(f"Ack packet: {ack}")
 
             block_no = int.from_bytes(ack[2:4], byteorder='big')
             prev_blockno = block_no
@@ -199,7 +199,7 @@ def write(filename, mode):
 
             # Reading files as data and should be <512 
             data = file.read(512)
-            print(f"Content : {data}")
+            #print(f"Content : {data}")
 
             if mode == 'netascii':
                
@@ -234,7 +234,7 @@ def data_packet(block_no, data, server):
     d_packet += data
 
     sock.sendto(d_packet, server)
-    print(f"[Data]: {d_packet[0:4]} : {len(d_packet)}\n")
+    #print(f"[Data]: {d_packet[0:4]} : {len(d_packet)}\n")
 
 # TFTP error codes and their corresponding error messages as defined in RFC 1350 version 2
 errors = {
@@ -408,6 +408,7 @@ def main():
                         tftp_create_req('write', filename, mode, server)
                         write(filename, mode)
                     else:
+
                         print('[File not found || access violation]\n')
 
                 else:
