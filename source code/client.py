@@ -209,23 +209,10 @@ def existing_file(filename):
         return 0
 
 
-def tftp_instruction(server_ip): 
+def tftp_server_connect(server_ip): 
         print('  ._._._._._._._._._._._._._._._._._.')
         print('\n  Successfully connected to ' + server_ip)
-        print('\n  COMMANDS:')
-        print('    TFTP Operation CODES:')
-        print('      "get", "put')
-        print('    TFTP Transfer MODES:')
-        print('      "netascii", "octet"')
-        print('\n')
-        print('  PROPER OPERATION:')
-        print('   <CODE> <FILENAME.EXTENSION> <MODE>')
-        print('   e.g., "get filename.txt netascii"\n')
 
-        print('  EXIT COMMANDS:')
-  
-        print('Client will only exit if all 3 parameters (code, filename and mode) are equal to "exit".')
-        print('	e.g., "exit exit exit"\n')
   
 
 
@@ -246,28 +233,52 @@ def main():
     print('\n')
 
     time.sleep(1)
-    tftp_instruction(server_ip)
+    tftp_server_connect(server_ip)
+
 
     while True:
 
         try:
-            operation, filename, mode = input('Enter command: ').split()
 
-            if operation == 'exit' and filename == 'exit' and mode == 'exit':
+            print('\n  COMMANDS:')
+            print('    TFTP Operation CODES:')
+            print('      [1] GET (Download) [2] PUT (Upload)')
+            print('      [3] Exit')
+
+            operation = input('Enter command: ')
+
+            if operation == '3':
                 print('Exiting Client...')
                 break
+
+            print('    TFTP Transfer FILENAME FORMAT:')
+            print('      Ex. "Sample.jpg"')
+            print('\n')
+
+            filename = input('Enter filename: ')
+
+            print('    TFTP Transfer MODES:')
+            print('      [1] "netascii", [2] "octet"')
+            print('\n')
+           
+            mode = input('Enter mode: ')
+            if mode == '1':
+                mode ='netascii'
+            elif mode == '2':
+                mode ='octet'
+
 
             operation = operation.lower()
             mode = mode.lower()
             # for sending RRQ and WRQ packets to the server
             if mode in MODES:
-                if operation == 'get':
+                if operation == '1':
                     filename_saved = input(
                         'Enter the filename to save the downloaded file: ')
                     tftp_request('read', filename, mode, server)
                     tftp_read(filename_saved, mode)
 
-                elif operation == 'put':
+                elif operation == '2':
                     if existing_file(filename):
                         tftp_request('write', filename, mode, server)
                         tftp_write(filename, mode)
